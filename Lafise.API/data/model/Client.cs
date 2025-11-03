@@ -10,6 +10,9 @@ namespace Lafise.API.data.model
     {
         public required int Id { get; set; }
         public required string Name { get; set; }
+        public string? Email { get; set; }
+        public string passwordHash { get; set; }
+        public string passwordSalt { get; set; }
         public required DateTime DateOfBirth { get; set; }
         public required string Gender { get; set; }
         public required decimal Income { get; set; }

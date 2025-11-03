@@ -52,7 +52,7 @@ public class Program
                         
            
 
-            // Configure the HTTP request pipeline.
+            
             string? env = builder.Configuration.GetValue<string>("env");
             if (app.Environment.IsDevelopment() || env == "DEV")
             {
@@ -74,7 +74,7 @@ public class Program
 
             app.UseCors("AllowAll");
 
-            // ROUTING - ESENCIAL para que funcionen los endpoints
+            
             app.UseRouting();
 
             app.UseAuthentication();
