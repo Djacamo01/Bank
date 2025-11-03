@@ -7,9 +7,9 @@ namespace Lafise.API.data.model
 {
     public class Transaction : IEntity, IAuditable
     {
-        public required string Id { get; set; }
+        public required int Id { get; set; }
 
-        public required string AccountId { get; set; }
+        public required int AccountId { get; set; }
 
         public required string Type { get; set; }
 
@@ -23,6 +23,6 @@ namespace Lafise.API.data.model
         
         public DateTime? DateModified { get; set; }
         // Navigation Property:
-        public Account Account { get; set; }
+        public Account? Account { get; set; }
     }
 }

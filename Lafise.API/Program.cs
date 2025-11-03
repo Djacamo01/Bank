@@ -1,44 +1,107 @@
-var builder = WebApplication.CreateBuilder(args);
+using System.Reflection;
+using System.Text.Json.Serialization;
+using Lafise.API.data;
+using Lafise.API.services.client;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+namespace Lafise.API;
+
+public class Program
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+   public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
 
-app.UseHttpsRedirection();
+            builder.Services.AddCors(opt =>
+            {
+                opt.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+            });
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+            //Agregar Servicios
+            AddServices(builder);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+            // Add services to the container.
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
-app.Run();
+            builder.Services.AddSwaggerGen(c =>
+            {
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                if (File.Exists(xmlPath))
+                {
+                    c.IncludeXmlComments(xmlPath);
+                }
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+                c.SwaggerDoc("v1", new OpenApiInfo 
+                { 
+                    Title = "Lafise API", 
+                    Version = "v1",
+                    Description = "API para gestión bancaria - Lafise"
+                });
+            });
+
+            var app = builder.Build();
+                        
+           
+
+            // Configure the HTTP request pipeline.
+            string? env = builder.Configuration.GetValue<string>("env");
+            if (app.Environment.IsDevelopment() || env == "DEV")
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lafise API v1");
+                });
+            }
+
+            app.UseHttpsRedirection();
+
+            app.UseStaticFiles();
+
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+            });
+
+            app.UseCors("AllowAll");
+
+            // ROUTING - ESENCIAL para que funcionen los endpoints
+            app.UseRouting();
+
+            app.UseAuthentication();
+
+            app.UseAuthorization();
+
+            app.MapControllers();
+
+            app.Run();
+        }
+
+        private static void AddServices(WebApplicationBuilder builder)
+        {
+            
+            //Agregando EF DataContext             
+            builder.Services.AddPooledDbContextFactory<BankDataContext>(
+                           options => options.UseSqlite(builder.Configuration.GetValue<string>("db-cnstr-bank")));
+
+
+            //Agregando servicios            
+            builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            
+
+            builder.Services.AddAuthorization();
+
+            builder.Services.AddScoped<IClientService, ClientService>();
+        }
+
+        
 }
