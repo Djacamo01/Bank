@@ -3,23 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Lafise.API.data.model
+namespace Lafise.API.services.Clients.Dto
 {
-    public class Client : IEntity, IAuditable
-
+    public class CreateClientDto
     {
-        public required int Id { get; set; }
         public required string Name { get; set; }
         public required string LastName { get; set; }
         public string? Email { get; set; }
-        public string PasswordHash { get; set; }
-        public string PasswordSalt { get; set; }
+        public required string Password { get; set; }
         public required DateTime DateOfBirth { get; set; }
         public required string Gender { get; set; }
         public required decimal Income { get; set; }
-        public DateTime DateCreated { get; set; }
-        public DateTime? DateModified { get; set; }
-        
-        public ICollection<Account> Accounts { get; set; } = new List<Account>();
     }
+    
 }

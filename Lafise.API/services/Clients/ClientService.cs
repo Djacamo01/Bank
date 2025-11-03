@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Lafise.API.data;
 using Lafise.API.data.model;
-using Lafise.API.services.client;
+using Lafise.API.services.Clients.Dto;
 using Microsoft.EntityFrameworkCore;
-namespace Lafise.API.services.client
+namespace Lafise.API.services.clients
 {
     public class ClientService:IClientService
     {
@@ -19,9 +19,20 @@ namespace Lafise.API.services.client
 
         public async Task<List<Client>> GetAllClients()
         {
-            using var context = _db.CreateDbContext();
+            using var context = await _db.CreateDbContextAsync();
             return await context.Clients.ToListAsync();
         }
+
+        public async Task<Client> CreateClient(CreateClientDto client)
+        {
+
+
+
+        }
+    
+
+
+
     }
 
     public interface IClientService

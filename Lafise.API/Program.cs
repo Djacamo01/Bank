@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Lafise.API.data;
-using Lafise.API.services.client;
+using Lafise.API.services.clients;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
