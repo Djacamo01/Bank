@@ -10,6 +10,7 @@ namespace Lafise.API.services.Auth
     {
         Task<LoginResultDto> Login(string userEmail, string password);
         Task<AuthInfoDto> GetAuthInfo();
+        Task<LoginResultDto> RefreshToken(string refreshToken);
     }
 }
 
