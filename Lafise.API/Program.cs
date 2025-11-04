@@ -93,11 +93,7 @@ public class Program
                     }
                 });
 
-                c.AddServer(new OpenApiServer
-                {
-                    Url = "https://localhost:7233",
-                    Description = "Servidor de desarrollo local (HTTPS)"
-                });
+                
                 c.AddServer(new OpenApiServer
                 {
                     Url = "http://localhost:5135",

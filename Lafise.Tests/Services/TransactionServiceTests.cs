@@ -142,7 +142,7 @@ public class TransactionServiceTests : IDisposable
         _mockAuthInfo.Setup(x => x.UserId()).Returns(clientId);
         _mockTransactionValidator.Setup(x => x.ValidateTransactionRequest(request));
         _mockAccountRepository.Setup(x => x.GetAccountByNumberAsync(accountNumber))
-            .ReturnsAsync((Account)null!);
+            .ReturnsAsync((Account?)null);
         _mockAccountValidator.Setup(x => x.ValidateAccountExists(null, accountNumber))
             .Throws(new LafiseException(404, "Account not found"));
 
@@ -313,7 +313,7 @@ public class TransactionServiceTests : IDisposable
         _mockAuthInfo.Setup(x => x.UserId()).Returns(clientId);
         _mockTransactionValidator.Setup(x => x.ValidateTransactionRequest(request));
         _mockAccountRepository.Setup(x => x.GetAccountByNumberAsync(accountNumber))
-            .ReturnsAsync((Account)null!);
+            .ReturnsAsync((Account?)null);
         _mockAccountValidator.Setup(x => x.ValidateAccountExists(null, accountNumber))
             .Throws(new LafiseException(404, "Account not found"));
 
