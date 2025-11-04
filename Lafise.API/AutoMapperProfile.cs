@@ -6,6 +6,7 @@ using AutoMapper;
 using Lafise.API.data.model;
 using Lafise.API.services.Accounts.Dto;
 using Lafise.API.services.Clients.Dto;
+using Lafise.API.services.Transactions.Dto;
 
 namespace Lafise.API
 {
@@ -18,6 +19,9 @@ namespace Lafise.API
             
             // Mapeos de Account
             CreateMap<Account, AccountDto>();
+            
+            // Mapeos de Transaction
+            CreateMap<Transaction, TransactionDto>();
         }
     }
 }
