@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Lafise.API.controllers.Dto;
 using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Accounts.Dto;
@@ -110,10 +111,51 @@ namespace Lafise.API.services.Accounts
             return _mapper.Map<AccountDto>(account);
         }
 
-        public async Task<List<AccountDto>> GetAllAccounts()
+        public async Task<PagedDto<AccountDto>> GetAllAccounts(PaginationRequestDto pagination)
         {
-            var accounts = await _accountRepository.GetAllAccountsAsync();
-            return _mapper.Map<List<AccountDto>>(accounts);
+            // Validar parámetros de paginación
+            if (pagination.Page < 1)
+                throw new LafiseException(400, "Page number must be greater than 0.");
+            if (pagination.PageSize < 1 || pagination.PageSize > 100)
+                throw new LafiseException(400, "Page size must be between 1 and 100.");
+
+            using var context = await _db.CreateDbContextAsync();
+
+            var query = context.Accounts.AsQueryable();
+
+            // Contar total de elementos
+            var totalCount = await query.CountAsync();
+
+            // Proteger contra división por cero
+            if (pagination.PageSize == 0)
+                pagination.PageSize = 10;
+
+            // Paginación
+            var pagedResults = await query
+                .OrderBy(a => a.AccountNumber)
+                .Skip((pagination.Page - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+            // Calcular total de páginas
+            var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
+
+            var accountDtos = _mapper.Map<List<AccountDto>>(pagedResults);
+
+            var response = new PagedDto<AccountDto>
+            {
+                Data = accountDtos,
+                Pagination = new Pagination
+                {
+                    TotalCount = totalCount,
+                    Count = accountDtos.Count,
+                    CurrentPage = pagination.Page,
+                    TotalPages = totalPages,
+                    PageSize = pagination.PageSize
+                }
+            };
+
+            return response;
         }
 
         public async Task<AccountDto> GetAccountDetailsByAccountNumber(string accountNumber)
@@ -123,15 +165,21 @@ namespace Lafise.API.services.Accounts
 
             var account = await _accountRepository.GetAccountByNumberAsync(accountNumber);
             _accountValidator.ValidateAccountExists(account, accountNumber);
-            
+
             if (account == null) throw new InvalidOperationException("Account should not be null after validation");
             return _mapper.Map<AccountDto>(account);
         }
 
-        public async Task<List<TransactionDto>> GetAccountMovements(string accountNumber)
+        public async Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination)
         {
             if (string.IsNullOrWhiteSpace(accountNumber))
                 throw new LafiseException(400, "Account number cannot be empty.");
+
+            // Validar parámetros de paginación
+            if (pagination.Page < 1)
+                throw new LafiseException(400, "Page number must be greater than 0.");
+            if (pagination.PageSize < 1 || pagination.PageSize > 100)
+                throw new LafiseException(400, "Page size must be between 1 and 100.");
 
             var account = await _accountRepository.GetAccountByNumberAsync(accountNumber);
             _accountValidator.ValidateAccountExists(account, accountNumber);
@@ -139,18 +187,47 @@ namespace Lafise.API.services.Accounts
             if (account == null) throw new InvalidOperationException("Account should not be null after validation");
 
             using var context = await _db.CreateDbContextAsync();
-            var transactions = await context.Transactions
-                .Where(t => t.AccountId == account.Id)
+
+            var query = context.Transactions
+                .Where(t => t.AccountId == account.Id);
+
+            // Contar total de elementos
+            var totalCount = await query.CountAsync();
+
+            // Proteger contra división por cero
+            if (pagination.PageSize == 0)
+                pagination.PageSize = 10;
+
+            // Paginación
+            var pagedResults = await query
                 .OrderByDescending(t => t.Date)
+                .Skip((pagination.Page - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
                 .ToListAsync();
 
-            var transactionDtos = _mapper.Map<List<TransactionDto>>(transactions);
+            // Calcular total de páginas
+            var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
+
+            var transactionDtos = _mapper.Map<List<TransactionDto>>(pagedResults);
             foreach (var dto in transactionDtos)
             {
                 dto.AccountNumber = account.AccountNumber;
             }
 
-            return transactionDtos;
+            var response = new PagedDto<TransactionDto>
+            {
+                Data = transactionDtos,
+                Pagination = new Pagination
+                {
+                    TotalCount = totalCount,
+                    Count = transactionDtos.Count,
+                    CurrentPage = pagination.Page,
+                    TotalPages = totalPages,
+                    PageSize = pagination.PageSize
+                }
+            };
+
+            return response;
         }
     }
 }

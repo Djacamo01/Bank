@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Lafise.API.controllers.Dto;
 using Lafise.API.services.Transactions.Dto;
 
 namespace Lafise.API.services.Transactions
@@ -10,7 +11,7 @@ namespace Lafise.API.services.Transactions
 
         Task<TransactionDto> Withdraw(CreateTransactionDto request);
 
-        Task<List<TransactionDto>> GetAccountMovements(string accountNumber);
+        Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination);
 
 
         Task<TransactionDto> Transfer(TransferDto request);

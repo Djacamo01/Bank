@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using Lafise.API.controllers.Dto;
 using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Accounts;
@@ -28,10 +29,51 @@ namespace Lafise.API.services.clients
             _mapper = mapper;
         }
 
-        public async Task<List<Client>> GetAllClients()
+        public async Task<PagedDto<ClientResponseDto>> GetAllClients(PaginationRequestDto pagination)
         {
             using var context = await _db.CreateDbContextAsync();
-            return await context.Clients.ToListAsync();
+
+            // Validar parámetros de paginación
+            if (pagination.Page < 1)
+                throw new LafiseException(400, "Page number must be greater than 0.");
+            if (pagination.PageSize < 1 || pagination.PageSize > 100)
+                throw new LafiseException(400, "Page size must be between 1 and 100.");
+
+            var query = context.Clients.AsQueryable();
+
+            // Contar total de elementos
+            var totalCount = await query.CountAsync();
+
+            // Proteger contra división por cero
+            if (pagination.PageSize == 0)
+                pagination.PageSize = 10;
+
+            // Paginación
+            var pagedResults = await query
+                .OrderBy(c => c.Id)
+                .Skip((pagination.Page - 1) * pagination.PageSize)
+                .Take(pagination.PageSize)
+                .ToListAsync();
+
+            // Calcular total de páginas
+            var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
+
+            var clientDtos = _mapper.Map<List<ClientResponseDto>>(pagedResults);
+
+            var response = new PagedDto<ClientResponseDto>
+            {
+                Data = clientDtos,
+                Pagination = new Pagination
+                {
+                    TotalCount = totalCount,
+                    Count = clientDtos.Count,
+                    CurrentPage = pagination.Page,
+                    TotalPages = totalPages,
+                    PageSize = pagination.PageSize
+                }
+            };
+
+            return response;
         }
 
         public async Task<ClientResponseDto> CreateClient(CreateClientDto client)
@@ -129,7 +171,7 @@ namespace Lafise.API.services.clients
 
     public interface IClientService
     {
-        Task<List<Client>> GetAllClients();
+        Task<PagedDto<ClientResponseDto>> GetAllClients(PaginationRequestDto pagination);
         Task<ClientResponseDto> CreateClient(CreateClientDto client);
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Lafise.API.controllers.Dto;
 using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Accounts.Dto;
@@ -13,10 +14,10 @@ namespace Lafise.API.services.Accounts
     {
         Task<AccountDto> CreateAccount(string clientId, string accountType);
         Task<AccountDto> CreateAccount(string accountType);
-        Task<List<AccountDto>> GetAllAccounts();
+        Task<PagedDto<AccountDto>> GetAllAccounts(PaginationRequestDto pagination);
         Task<AccountDto> GetAccountDetailsByAccountNumber(string accountNumber);
         Task<AccountBalanceDto> GetAccountBalance();
         Task<AccountBalanceDto> GetAccountBalance(string accountNumber);
-        Task<List<TransactionDto>> GetAccountMovements(string accountNumber);
+        Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination);
     }
 }
