@@ -9,7 +9,7 @@ namespace Lafise.API.services.Auth.JWT
 {
     public interface IJwtTokenGenerator
     {
-        TokenInfo CreateToken(Client user);
+        TokenInfo CreateToken(Client user, string accountNumber = "");
         string GenerateRefreshToken(Client user);
     }
 }

@@ -9,6 +9,7 @@ namespace Lafise.API.services.Auth
     public interface IAuthService
     {
         Task<LoginResultDto> Login(string userEmail, string password);
+        Task<AuthInfoDto> GetAuthInfo();
     }
 }
 

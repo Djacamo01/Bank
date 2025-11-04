@@ -13,5 +13,7 @@ namespace Lafise.API.services.Auth
 
         string UserEmail();
 
+        string AccountNumber();
+
     }
 }

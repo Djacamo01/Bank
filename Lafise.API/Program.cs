@@ -140,6 +140,7 @@ public class Program
 
             // Registrar servicios de autenticación
             builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+            builder.Services.AddScoped<IAuthInfo, AuthInfo>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
             // Registrar servicios de negocio

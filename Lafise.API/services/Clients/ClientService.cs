@@ -18,6 +18,8 @@ namespace Lafise.API.services.clients
         private readonly ICryptor _cryptor;
         private readonly IMapper _mapper;
 
+        
+
         public ClientService(IDbContextFactory<BankDataContext> db, IAccountService accountService, ICryptor cryptor, IMapper mapper)
         {
             _db = db;
@@ -50,7 +52,7 @@ namespace Lafise.API.services.clients
                             .AnyAsync(c => c.TaxId.ToLower() == normalizedTaxIdLower);
                         if (taxIdExists)
                         {
-                            throw new InvalidOperationException($"A client with Tax ID '{normalizedTaxId}' already exists.");
+                            throw new LafiseException(400, $"A client with Tax ID '{normalizedTaxId}' already exists.");
                         }
 
                         var newClient = new Client
@@ -69,15 +71,19 @@ namespace Lafise.API.services.clients
                         context.AddOrUpdate(newClient);
                         await context.SaveChangesAsync();
 
-
-                        if (!string.IsNullOrWhiteSpace(client.AccountType))
+                        // Siempre crear la cuenta ya que AccountType es required
+                        if (string.IsNullOrWhiteSpace(client.AccountType))
                         {
-                            await _accountService.CreateAccount(context, newClient.Id, client.AccountType);
+                            throw new ArgumentException("Account type is required when creating a client.", nameof(client.AccountType));
                         }
 
+                        var createdAccount = await _accountService.CreateAccount(context, newClient.Id, client.AccountType);
 
                         await transaction.CommitAsync();
-                        return _mapper.Map<ClientResponseDto>(newClient);
+                        
+                        var response = _mapper.Map<ClientResponseDto>(newClient);
+                        response.AccountNumber = createdAccount.AccountNumber;
+                        return response;
                     }
                     catch
                     {

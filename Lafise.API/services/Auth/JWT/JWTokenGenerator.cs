@@ -20,13 +20,14 @@ namespace Lafise.API.services.Auth.JWT
             _config = config;
         }
 
-        public TokenInfo CreateToken(Client user)
+        public TokenInfo CreateToken(Client user, string accountNumber )
         {
             var claims = new List<Claim>()
             {
                 new Claim("UserId", user.Id),
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
                 new Claim(ClaimTypes.Name, $"{user.Name} {user.LastName}"),
+                new Claim("AccountNumber", accountNumber),
             };
 
             var key = _config.GetValue<string>("jwt-token-secret-key");

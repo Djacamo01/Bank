@@ -62,6 +62,13 @@ namespace Lafise.API.services.Clients.Dto
         public decimal Income { get; set; }
 
         /// <summary>
+        /// Account number for the client.
+        /// </summary>
+        [Display(Description = "Account number for the client")]
+        [DefaultValue("10001111222")]
+        public string AccountNumber { get; set; }
+
+        /// <summary>
         /// Date and time the client record was created.
         /// </summary>
         [Display(Description = "Date and time when the client record was created")]
