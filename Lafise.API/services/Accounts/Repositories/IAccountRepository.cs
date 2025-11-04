@@ -12,6 +12,8 @@ namespace Lafise.API.services.Accounts.Repositories
 
         Task<Account?> GetAccountByClientIdAsync(string clientId);
 
+        Task<List<Account>> GetAccountsByClientIdAsync(string clientId);
+
         Task<List<Account>> GetAllAccountsAsync();
 
         Task<List<string>> GetAllAccountNumbersAsync();

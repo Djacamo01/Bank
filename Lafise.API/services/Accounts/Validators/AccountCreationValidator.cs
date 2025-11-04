@@ -48,10 +48,40 @@ namespace Lafise.API.services.Accounts.Validators
                 throw new LafiseException(404, $"No client found with the ID '{clientId}'.");
         }
 
+        public Task ValidateClientExistsAsync(string clientId, BankDataContext context)
+        {
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new LafiseException(400, "Client ID cannot be empty.");
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            return ValidateClientExistsAsyncInternal(clientId, context);
+        }
+
+        private async Task ValidateClientExistsAsyncInternal(string clientId, BankDataContext context)
+        {
+            var clientExists = await context.Clients.AnyAsync(c => c.Id == clientId);
+            
+            if (!clientExists)
+                throw new LafiseException(404, $"No client found with the ID '{clientId}'.");
+        }
+
         public async Task ValidateNoDuplicateAccountTypeAsync(string clientId, string accountType, string[] validAccountTypes)
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();
-            
+            await ValidateNoDuplicateAccountTypeAsyncInternal(clientId, accountType, validAccountTypes, context);
+        }
+
+        public Task ValidateNoDuplicateAccountTypeAsync(string clientId, string accountType, string[] validAccountTypes, BankDataContext context)
+        {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            return ValidateNoDuplicateAccountTypeAsyncInternal(clientId, accountType, validAccountTypes, context);
+        }
+
+        private async Task ValidateNoDuplicateAccountTypeAsyncInternal(string clientId, string accountType, string[] validAccountTypes, BankDataContext context)
+        {
             var typeNormalizedLower = accountType.ToLower();
             var existingAccount = await context.Accounts
                 .FirstOrDefaultAsync(a => a.ClientId == clientId && a.AccountType.ToLower() == typeNormalizedLower);

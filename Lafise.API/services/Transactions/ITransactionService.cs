@@ -11,7 +11,7 @@ namespace Lafise.API.services.Transactions
 
         Task<TransactionDto> Withdraw(CreateTransactionDto request);
 
-        Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination);
+        Task<PagedDtoSummary<TransactionDto, TransactionSummaryDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination);
 
 
         Task<TransactionDto> Transfer(TransferDto request);

@@ -32,6 +32,14 @@ namespace Lafise.API.services.Accounts.Repositories
                 .FirstOrDefaultAsync(a => a.ClientId == clientId);
         }
 
+        public async Task<List<Account>> GetAccountsByClientIdAsync(string clientId)
+        {
+            using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Accounts
+                .Where(a => a.ClientId == clientId)
+                .ToListAsync();
+        }
+
         public async Task<List<Account>> GetAllAccountsAsync()
         {
             using var context = await _dbContextFactory.CreateDbContextAsync();

@@ -8,6 +8,7 @@ using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Auth;
 using Lafise.API.services.Transactions.Dto;
+using TransactionSummaryDto = Lafise.API.services.Transactions.Dto.TransactionSummaryDto;
 using Lafise.API.services.Transactions.Factories;
 using Lafise.API.services.Transactions.Repositories;
 using Lafise.API.services.Transactions.Validators;
@@ -86,7 +87,7 @@ namespace Lafise.API.services.Transactions
             return MapToDto(transaction, account.AccountNumber);
         }
 
-        public async Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination)
+        public async Task<PagedDtoSummary<TransactionDto, TransactionSummaryDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination)
         {
             if (string.IsNullOrWhiteSpace(accountNumber))
                 throw new LafiseException(400, "Account number cannot be empty.");
@@ -122,9 +123,41 @@ namespace Lafise.API.services.Transactions
             // Calcular total de páginas
             var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
 
+            
+            var allTransactions = await query.ToListAsync();
+            
+            var summary = new TransactionSummaryDto
+            {
+                TotalDeposits = allTransactions.Count(t => t.Type.Equals("Deposit", StringComparison.OrdinalIgnoreCase)),
+                TotalDepositsAmount = allTransactions
+                    .Where(t => t.Type.Equals("Deposit", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalWithdrawals = allTransactions.Count(t => t.Type.Equals("Withdrawal", StringComparison.OrdinalIgnoreCase)),
+                TotalWithdrawalsAmount = allTransactions
+                    .Where(t => t.Type.Equals("Withdrawal", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalTransfersOut = allTransactions.Count(t => t.Type.Equals("Transfer Out", StringComparison.OrdinalIgnoreCase)),
+                TotalTransfersOutAmount = allTransactions
+                    .Where(t => t.Type.Equals("Transfer Out", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalTransfersIn = allTransactions.Count(t => t.Type.Equals("Transfer In", StringComparison.OrdinalIgnoreCase)),
+                TotalTransfersInAmount = allTransactions
+                    .Where(t => t.Type.Equals("Transfer In", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                CurrentBalance = account.CurrentBalance
+            };
+
+            // Calcular monto neto
+            summary.NetAmount = (summary.TotalDepositsAmount + summary.TotalTransfersInAmount) 
+                - (summary.TotalWithdrawalsAmount + summary.TotalTransfersOutAmount);
+
             var transactionDtos = MapTransactionsToDto(pagedResults, account.AccountNumber);
 
-            var response = new PagedDto<TransactionDto>
+            var response = new PagedDtoSummary<TransactionDto, TransactionSummaryDto>
             {
                 Data = transactionDtos,
                 Pagination = new Pagination
@@ -134,7 +167,8 @@ namespace Lafise.API.services.Transactions
                     CurrentPage = pagination.Page,
                     TotalPages = totalPages,
                     PageSize = pagination.PageSize
-                }
+                },
+                Summary = summary
             };
 
             return response;

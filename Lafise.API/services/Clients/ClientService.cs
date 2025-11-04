@@ -7,9 +7,17 @@ using Lafise.API.controllers.Dto;
 using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Accounts;
+using Lafise.API.services.Accounts.Repositories;
+using Lafise.API.services.Auth;
+using Lafise.API.services.Clients;
 using Lafise.API.services.Clients.Dto;
+using Lafise.API.services.Clients.Factories;
+using Lafise.API.services.Clients.Repositories;
+using Lafise.API.services.Clients.Services;
+using Lafise.API.services.Clients.Validators;
 using Lafise.API.utils;
 using Microsoft.EntityFrameworkCore;
+
 namespace Lafise.API.services.clients
 {
     public class ClientService : IClientService
@@ -18,160 +26,117 @@ namespace Lafise.API.services.clients
         private readonly IAccountService _accountService;
         private readonly ICryptor _cryptor;
         private readonly IMapper _mapper;
+        private readonly IAccountRepository _accountRepository;
+        private readonly IAuthInfo _authInfo;
+        private readonly IClientRepository _clientRepository;
+        private readonly IClientCreationValidator _clientCreationValidator;
+        private readonly IClientFactory _clientFactory;
+        private readonly ITransactionSummaryCalculator _transactionSummaryCalculator;
 
-        
-
-        public ClientService(IDbContextFactory<BankDataContext> db, IAccountService accountService, ICryptor cryptor, IMapper mapper)
+        public ClientService(
+            IDbContextFactory<BankDataContext> db, 
+            IAccountService accountService, 
+            ICryptor cryptor, 
+            IMapper mapper,
+            IAccountRepository accountRepository,
+            IAuthInfo authInfo,
+            IClientRepository clientRepository,
+            IClientCreationValidator clientCreationValidator,
+            IClientFactory clientFactory,
+            ITransactionSummaryCalculator transactionSummaryCalculator)
         {
-            _db = db;
-            _accountService = accountService;
-            _cryptor = cryptor;
-            _mapper = mapper;
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+            _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
+            _cryptor = cryptor ?? throw new ArgumentNullException(nameof(cryptor));
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+            _accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
+            _authInfo = authInfo ?? throw new ArgumentNullException(nameof(authInfo));
+            _clientRepository = clientRepository ?? throw new ArgumentNullException(nameof(clientRepository));
+            _clientCreationValidator = clientCreationValidator ?? throw new ArgumentNullException(nameof(clientCreationValidator));
+            _clientFactory = clientFactory ?? throw new ArgumentNullException(nameof(clientFactory));
+            _transactionSummaryCalculator = transactionSummaryCalculator ?? throw new ArgumentNullException(nameof(transactionSummaryCalculator));
         }
 
-        public async Task<PagedDto<ClientResponseDto>> GetAllClients(PaginationRequestDto pagination)
-        {
-            using var context = await _db.CreateDbContextAsync();
-
-            // Validar parámetros de paginación
-            if (pagination.Page < 1)
-                throw new LafiseException(400, "Page number must be greater than 0.");
-            if (pagination.PageSize < 1 || pagination.PageSize > 100)
-                throw new LafiseException(400, "Page size must be between 1 and 100.");
-
-            var query = context.Clients.AsQueryable();
-
-            // Contar total de elementos
-            var totalCount = await query.CountAsync();
-
-            // Proteger contra división por cero
-            if (pagination.PageSize == 0)
-                pagination.PageSize = 10;
-
-            // Paginación
-            var pagedResults = await query
-                .OrderBy(c => c.Id)
-                .Skip((pagination.Page - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ToListAsync();
-
-            // Calcular total de páginas
-            var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
-
-            var clientDtos = _mapper.Map<List<ClientResponseDto>>(pagedResults);
-
-            var response = new PagedDto<ClientResponseDto>
-            {
-                Data = clientDtos,
-                Pagination = new Pagination
-                {
-                    TotalCount = totalCount,
-                    Count = clientDtos.Count,
-                    CurrentPage = pagination.Page,
-                    TotalPages = totalPages,
-                    PageSize = pagination.PageSize
-                }
-            };
-
-            return response;
-        }
+       
 
         public async Task<ClientResponseDto> CreateClient(CreateClientDto client)
         {
-            using (var context = await _db.CreateDbContextAsync())
+            using var context = await _db.CreateDbContextAsync();
+
+            using var transaction = await context.Database.BeginTransactionAsync();
+            try
             {
+                
+                var normalizedTaxId = _clientCreationValidator.ValidateAndNormalizeTaxId(client.TaxId);
 
-                using (var transaction = await context.Database.BeginTransactionAsync())
-                {
-                    try
-                    {
+               
+                await _clientCreationValidator.ValidateTaxIdNotDuplicateAsync(normalizedTaxId, context);
 
-                        var normalizedTaxId = ValidateAndNormalizeTaxId(client.TaxId);
+                
+                _clientCreationValidator.ValidateAccountTypeRequired(client.AccountType);
 
+                
+                var newClient = _clientFactory.CreateClient(client, normalizedTaxId);
 
-                        var normalizedTaxIdLower = normalizedTaxId.ToLower();
-                        var taxIdExists = await context.Clients
-                            .AnyAsync(c => c.TaxId.ToLower() == normalizedTaxIdLower);
-                        if (taxIdExists)
-                        {
-                            throw new LafiseException(400, $"A client with Tax ID '{normalizedTaxId}' already exists.");
-                        }
+               
+                _cryptor.ValidatePassword(client.Password);
+                _cryptor.CreatePasswordHash(client.Password, newClient);
 
-                        var newClient = new Client
-                        {
-                            Name = client.Name,
-                            LastName = client.LastName,
-                            TaxId = normalizedTaxId,
-                            Email = client.Email,
-                            DateOfBirth = client.DateOfBirth,
-                            Gender = client.Gender,
-                            Income = client.Income,
+             
+                await _clientRepository.SaveClientAsync(newClient, context);
+                await context.SaveChangesAsync();
 
-                        };
-                        _cryptor.ValidatePassword(client.Password);
-                        _cryptor.CreatePasswordHash(client.Password, newClient);
-                        context.AddOrUpdate(newClient);
-                        await context.SaveChangesAsync();
+               
+                var createdAccount = await _accountService.CreateAccount(newClient.Id, client.AccountType, context);
 
-                        // Siempre crear la cuenta ya que AccountType es required
-                        if (string.IsNullOrWhiteSpace(client.AccountType))
-                        {
-                            throw new ArgumentException("Account type is required when creating a client.", nameof(client.AccountType));
-                        }
-
-                        var createdAccount = await _accountService.CreateAccount(newClient.Id, client.AccountType);
-
-                        await transaction.CommitAsync();
-                        
-                        var response = _mapper.Map<ClientResponseDto>(newClient);
-                        response.AccountNumber = createdAccount.AccountNumber;
-                        return response;
-                    }
-                    catch
-                    {
-                        // Si algo falla, hacer rollback de toda la transacción
-                        await transaction.RollbackAsync();
-                        throw;
-                    }
-                }
+                await transaction.CommitAsync();
+                
+                var response = _mapper.Map<ClientResponseDto>(newClient);
+                response.AccountNumber = createdAccount.AccountNumber;
+                return response;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 
-        private string ValidateAndNormalizeTaxId(string taxId)
+        public async Task<ClientAccountsSummaryDto> GetClientAccountsSummary()
         {
-            if (string.IsNullOrWhiteSpace(taxId))
+            
+            var clientId = _authInfo.UserId();
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new LafiseException(401, "User not authenticated.");
+
+            using var context = await _db.CreateDbContextAsync();
+
+           
+            var client = await _clientRepository.GetClientByIdAsync(clientId);
+            if (client == null)
+                throw new LafiseException(404, $"Client with ID '{clientId}' not found.");
+
+          
+            var accounts = await _accountRepository.GetAccountsByClientIdAsync(clientId);
+
+           
+            var accountSummaries = await _transactionSummaryCalculator.CalculateAccountsSummariesAsync(accounts, context);
+
+           
+            var summary = new ClientAccountsSummaryDto
             {
-                throw new ArgumentException("Tax ID cannot be empty.", nameof(taxId));
-            }
+                ClientId = client.Id,
+                FullName = $"{client.Name} {client.LastName}",
+                Email = client.Email,
+                Accounts = accountSummaries,
+                TotalAccounts = accounts.Count,
+                TotalBalance = accounts.Sum(a => a.CurrentBalance)
+            };
 
-            // Normalizar TaxId (eliminar espacios y guiones comunes)
-            var normalizedTaxId = taxId.Trim().Replace("-", "").Replace(" ", "");
-
-            // Validar formato básico (solo números y letras, longitud mínima)
-            if (normalizedTaxId.Length < 5)
-            {
-                throw new ArgumentException("Tax ID must be at least 5 characters long.", nameof(taxId));
-            }
-
-            // Validar que contenga solo caracteres válidos
-            if (!normalizedTaxId.All(c => char.IsLetterOrDigit(c)))
-            {
-                throw new ArgumentException("Tax ID can only contain letters and numbers.", nameof(taxId));
-            }
-
-            return normalizedTaxId;
+            return summary;
         }
 
-
-
-
-
-
     }
 
-    public interface IClientService
-    {
-        Task<PagedDto<ClientResponseDto>> GetAllClients(PaginationRequestDto pagination);
-        Task<ClientResponseDto> CreateClient(CreateClientDto client);
-    }
+   
 }
