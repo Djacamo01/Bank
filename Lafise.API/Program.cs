@@ -52,24 +52,29 @@ public class Program
 
            builder.Services.AddSwaggerGen(c =>
             {
+                // Configuración de seguridad JWT
                 c.OperationFilter<SecurityRequirementsOperationFilter>();
                 c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
                 {
-                    Description = "Standard Authorization header using the Bearer scheme. Example: \"bearer {token}\"",
+                    Description = "Autenticación JWT Bearer Token. Incluir el token en el header Authorization como: \"Bearer {token}\"",
                     In = ParameterLocation.Header,
                     Name = "Authorization",
-                    Type = SecuritySchemeType.ApiKey
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT"
                 });
 
+                // Incluir comentarios XML con soporte para controladores
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 if (File.Exists(xmlPath))
                 {
-                    c.IncludeXmlComments(xmlPath);
+                    c.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
                 }
 
-                c.SwaggerDoc("v1", new OpenApiInfo
-                {
+                
+                c.SwaggerDoc("v1", new OpenApiInfo 
+                { 
                     Title = "Lafise Banking System API - Prueba Técnica",
                     Version = "v1",
                     Description = "Esta API forma parte de una prueba técnica que implementa funcionalidades típicas de un sistema bancario, como la gestión de cuentas, saldos y otros recursos relacionados. No es un producto oficial de Banco Lafise. El código y las implementaciones son de autoría individual exclusivamente con fines evaluativos y demostrativos.",
@@ -86,6 +91,64 @@ public class Program
                         Url = new Uri("https://opensource.org/licenses/MIT")
                     }
                 });
+
+                c.AddServer(new OpenApiServer
+                {
+                    Url = "https://localhost:7233",
+                    Description = "Servidor de desarrollo local (HTTPS)"
+                });
+                c.AddServer(new OpenApiServer
+                {
+                    Url = "http://localhost:5135",
+                    Description = "Servidor de desarrollo local (HTTP)"
+                });
+
+                
+                c.TagActionsBy(apiDesc =>
+                {
+                    var controllerName = apiDesc.GroupName ?? apiDesc.ActionDescriptor.RouteValues["controller"];
+                    return new[] { controllerName ?? "Default" };
+                });
+
+               
+                c.OrderActionsBy(apiDesc =>
+                {
+                    var method = apiDesc.HttpMethod ?? "";
+                    var path = apiDesc.RelativePath ?? "";
+                    return $"{method}_{path}";
+                });
+
+                
+                c.CustomOperationIds(apiDesc =>
+                {
+                    var controllerName = apiDesc.ActionDescriptor.RouteValues["controller"];
+                    var actionName = apiDesc.ActionDescriptor.RouteValues["action"];
+                    return $"{controllerName}_{actionName}";
+                });
+
+                
+                c.DescribeAllParametersInCamelCase();
+
+            
+                c.IgnoreObsoleteActions();
+                c.IgnoreObsoleteProperties();
+
+                
+                c.SupportNonNullableReferenceTypes();
+                c.NonNullableReferenceTypesAsRequired();
+
+                
+                c.UseAllOfForInheritance();
+
+               
+                c.UseOneOfForPolymorphism();
+
+                c.UseAllOfToExtendReferenceSchemas();
+
+                
+                c.UseInlineDefinitionsForEnums();
+
+                c.CustomSchemaIds(type => type.FullName?.Replace("+", ".") ?? type.Name);
             });
 
             var app = builder.Build();
@@ -99,7 +162,17 @@ public class Program
                 app.UseSwagger();
                 app.UseSwaggerUI(c =>
                 {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lafise API v1");
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lafise Banking System API v1");
+                    c.DocumentTitle = "Lafise Banking System API - Documentación";
+                    c.DefaultModelsExpandDepth(-1); 
+                    c.DefaultModelExpandDepth(2); 
+                    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List); 
+                    c.EnableDeepLinking(); 
+                    c.EnableFilter(); 
+                    c.EnableValidator(); 
+                    c.ShowExtensions(); 
+                    c.ShowCommonExtensions(); 
+                    c.RoutePrefix = "swagger"; 
                 });
             }
 
@@ -152,24 +225,25 @@ public class Program
 
             builder.Services.AddAuthorization();
 
-            
+            // Registrar servicios de utilidad
             builder.Services.AddScoped<ICryptor, Cryptor>();
 
+            // Registrar servicios de autenticación
             builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             builder.Services.AddScoped<IAuthInfo, AuthInfo>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
-           
+            // Registrar servicios de negocio
             builder.Services.AddScoped<IClientService, ClientService>();
             
-           
+          
             builder.Services.AddScoped<IAccountCreationValidator, AccountCreationValidator>();
             builder.Services.AddScoped<Lafise.API.services.Accounts.Repositories.IAccountRepository, Lafise.API.services.Accounts.Repositories.AccountRepository>();
             builder.Services.AddScoped<IAccountFactory, AccountFactory>();
             builder.Services.AddScoped<IAccountNumberGenerator, AccountNumberGenerator>();
             builder.Services.AddScoped<IAccountBalanceMapper, AccountBalanceMapper>();
             
-            
+           
             builder.Services.AddScoped<ITransactionValidator, TransactionValidator>();
             builder.Services.AddScoped<IAccountValidator, AccountValidator>();
             builder.Services.AddScoped<Lafise.API.services.Transactions.Repositories.IAccountRepository, Lafise.API.services.Transactions.Repositories.AccountRepository>();

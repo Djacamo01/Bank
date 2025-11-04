@@ -33,24 +33,29 @@ namespace Lafise.API.controllers
         }
 
         /// <summary>
-        /// Gets all accounts.
+        /// Gets all accounts with pagination.
         /// </summary>
-        /// <returns>Returns a list of all account details.</returns>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
+        /// <returns>Returns a paginated list of all account details.</returns>
         /// <remarks>
-        /// Obtains the complete list of accounts in the system.
+        /// Obtains a paginated list of accounts in the system.
         /// </remarks>
         [HttpGet]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(List<AccountDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedDto<AccountDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
-        [Description("Gets all accounts")]
-        public async Task<ActionResult<List<AccountDto>>> GetAllAccounts()
+        [Description("Gets all accounts with pagination")]
+        public async Task<ActionResult<PagedDto<AccountDto>>> GetAllAccounts(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 10)
         {
             try
             {
-                var accounts = await _accountService.GetAllAccounts();
+                var pagination = new PaginationRequestDto { Page = page, PageSize = pageSize };
+                var accounts = await _accountService.GetAllAccounts(pagination);
                 return Ok(accounts);
             }
             catch (LafiseException ex)
@@ -108,26 +113,32 @@ namespace Lafise.API.controllers
         }
 
         /// <summary>
-        /// Gets all transactions (movements) for a specific account.
+        /// Gets all transactions (movements) for a specific account with pagination.
         /// </summary>
         /// <param name="accountNumber">The account number to get transactions for.</param>
-        /// <returns>List of transactions for the account.</returns>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
+        /// <returns>Paginated list of transactions for the account.</returns>
         /// <remarks>
-        /// Returns all transactions for the specified account, ordered by date (most recent first).
+        /// Returns a paginated list of transactions for the specified account, ordered by date (most recent first).
         /// </remarks>
         [HttpGet("{accountNumber}/movements")]
         [Authorize]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(List<TransactionDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedDto<TransactionDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
-        [Description("Gets all transactions (movements) for an account")]
-        public async Task<ActionResult<List<TransactionDto>>> GetAccountMovements(string accountNumber)
+        [Description("Gets all transactions (movements) for an account with pagination")]
+        public async Task<ActionResult<PagedDto<TransactionDto>>> GetAccountMovements(
+            string accountNumber,
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 10)
         {
             try
             {
-                var movements = await _accountService.GetAccountMovements(accountNumber);
+                var pagination = new PaginationRequestDto { Page = page, PageSize = pageSize };
+                var movements = await _accountService.GetAccountMovements(accountNumber, pagination);
                 return Ok(movements);
             }
             catch (LafiseException ex)

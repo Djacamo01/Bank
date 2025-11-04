@@ -32,23 +32,28 @@ namespace Lafise.API.controllers
         }
 
         /// <summary>
-        /// Gets all clients.
+        /// Gets all clients with pagination.
         /// </summary>
-        /// <returns>Returns a list of all client details.</returns>
+        /// <param name="page">Page number (default: 1)</param>
+        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
+        /// <returns>Returns a paginated list of all client details.</returns>
         /// <remarks>
-        /// Obtains the complete list of clients in the system.
+        /// Obtains a paginated list of clients in the system.
         /// </remarks>
         [HttpGet]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(List<Client>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedDto<ClientResponseDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
-        [Description("Gets all clients")]
-        public async Task<ActionResult<List<Client>>> GetAllClients()
+        [Description("Gets all clients with pagination")]
+        public async Task<ActionResult<PagedDto<ClientResponseDto>>> GetAllClients(
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 10)
         {
             try
             {
-                var clients = await _clientService.GetAllClients();
+                var pagination = new PaginationRequestDto { Page = page, PageSize = pageSize };
+                var clients = await _clientService.GetAllClients(pagination);
                 return Ok(clients);
             }
             catch (LafiseException ex)
