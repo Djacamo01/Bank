@@ -3,6 +3,7 @@ using System;
 using Lafise.API.data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lafise.API.Migrations
 {
     [DbContext(typeof(BankDataContext))]
-    partial class BankDataContextModelSnapshot : ModelSnapshot
+    [Migration("20251103230420_InitialSchema")]
+    partial class InitialSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -90,10 +93,6 @@ namespace Lafise.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordSalt")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("TaxId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

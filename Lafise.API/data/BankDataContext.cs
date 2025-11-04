@@ -10,7 +10,7 @@ namespace Lafise.API.data
     // BankDataContext.cs
     public class BankDataContext : DbContext
     {
-        
+
         public BankDataContext(DbContextOptions<BankDataContext> options) : base(options)
         {
         }
@@ -20,10 +20,28 @@ namespace Lafise.API.data
         public DbSet<Account> Accounts { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
 
-       
 
-       
+
+
         #region Sobrecargas de SaveChanges (Auditoría)
+
+        public void AddOrUpdate(IEntity entity)
+        {
+            if (string.IsNullOrWhiteSpace(entity.Id))
+                Add(entity);
+            else
+                Update(entity);
+        }
+
+        public override EntityEntry<TEntity> Add<TEntity>(TEntity entity)
+        {
+            //Asignar Id
+            if (entity is IEntity)
+                (entity as IEntity).Id = Guid.NewGuid().ToString().ToLower();
+
+            return base.Add(entity);
+        }
+
 
         public override int SaveChanges()
         {
@@ -51,28 +69,34 @@ namespace Lafise.API.data
 
         private void AuditChanges()
         {
-            var now = DateTime.UtcNow;
-
-            // 1. Entidades Añadidas: Asignar DateCreated
             var addedAuditedEntities = ChangeTracker.Entries<IAuditable>()
               .Where(p => p.State == EntityState.Added)
               .Select(p => p.Entity);
 
-            foreach (var added in addedAuditedEntities)
-            {
-                added.DateCreated = now;
-            }
-
-            // 2. Entidades Modificadas: Asignar DateModified
             var modifiedAuditedEntities = ChangeTracker.Entries<IAuditable>()
               .Where(p => p.State == EntityState.Modified)
               .Select(p => p.Entity);
+
+            var now = DateTime.UtcNow;
+            foreach (var added in addedAuditedEntities)
+            {
+                if (added is IEntity)
+                {
+                    IEntity addedEntity = (IEntity)added;
+                    if (string.IsNullOrEmpty(addedEntity.Id))
+                        addedEntity.Id = Guid.NewGuid().ToString().ToLower();
+                }
+
+                added.DateCreated = now;
+            }
 
             foreach (var modified in modifiedAuditedEntities)
             {
                 modified.DateModified = now;
             }
         }
+
+
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -82,18 +106,18 @@ namespace Lafise.API.data
             modelBuilder.Entity<Account>()
                 .HasIndex(a => a.AccountNumber)
                 .IsUnique();
-            
-            modelBuilder.Entity<Client>()
-                .HasMany(c => c.Accounts) 
-                .WithOne(a => a.Client)   
-                    .HasForeignKey(a => a.ClientId); 
-                    
-            modelBuilder.Entity<Account>()
-                .HasMany(a => a.Transactions) 
-                .WithOne(t => t.Account)     
-                .HasForeignKey(t => t.AccountId); 
 
-            
+            modelBuilder.Entity<Client>()
+                .HasMany(c => c.Accounts)
+                .WithOne(a => a.Client)
+                    .HasForeignKey(a => a.ClientId);
+
+            modelBuilder.Entity<Account>()
+                .HasMany(a => a.Transactions)
+                .WithOne(t => t.Account)
+                .HasForeignKey(t => t.AccountId);
+
+
         }
     }
 }

@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lafise.API.Migrations
 {
     [DbContext(typeof(BankDataContext))]
-    [Migration("20251103211644_InitialSchema")]
-    partial class InitialSchema
+    [Migration("20251103232025_AddTaxIdToClient")]
+    partial class AddTaxIdToClient
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -22,16 +22,20 @@ namespace Lafise.API.Migrations
 
             modelBuilder.Entity("Lafise.API.data.model.Account", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AccountNumber")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("ClientId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("CurrentBalance")
                         .HasColumnType("TEXT");
@@ -54,9 +58,8 @@ namespace Lafise.API.Migrations
 
             modelBuilder.Entity("Lafise.API.data.model.Client", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("DateCreated")
                         .HasColumnType("TEXT");
@@ -67,6 +70,9 @@ namespace Lafise.API.Migrations
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Email")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Gender")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -74,7 +80,23 @@ namespace Lafise.API.Migrations
                     b.Property<decimal>("Income")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaxId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -85,12 +107,12 @@ namespace Lafise.API.Migrations
 
             modelBuilder.Entity("Lafise.API.data.model.Transaction", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
 
-                    b.Property<int>("AccountId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("AccountId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("TEXT");

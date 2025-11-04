@@ -1,9 +1,13 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
+using AutoMapper;
 using Lafise.API.data;
+using Lafise.API.services.Accounts;
 using Lafise.API.services.clients;
+using Lafise.API.utils;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 
 
@@ -21,10 +25,10 @@ public class Program
                 opt.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
             });
 
-            //Agregar Servicios
+           
             AddServices(builder);
+            builder.Services.AddAutoMapper(cfg => { }, typeof(AutoMapperProfile));
 
-            // Add services to the container.
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -93,6 +97,18 @@ public class Program
             builder.Services.AddPooledDbContextFactory<BankDataContext>(
                            options => options.UseSqlite(builder.Configuration.GetValue<string>("db-cnstr-bank")));
 
+            // Configurar AccountSettings desde appsettings.json
+            builder.Services.Configure<AccountSettings>(
+                builder.Configuration.GetSection(AccountSettings.SettingsName));
+
+            
+            builder.Services.AddSingleton<AccountSettings>(sp =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var settings = new AccountSettings();
+                config.GetSection(AccountSettings.SettingsName).Bind(settings);
+                return settings;
+            });
 
             //Agregando servicios            
             builder.Services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -100,7 +116,13 @@ public class Program
 
             builder.Services.AddAuthorization();
 
+            // Registrar servicios de utilidad
+            builder.Services.AddScoped<ICryptor, Cryptor>();
+
+            // Registrar servicios de negocio
             builder.Services.AddScoped<IClientService, ClientService>();
+            builder.Services.AddScoped<IAccountService, AccountService>();
+           
         }
 
         
