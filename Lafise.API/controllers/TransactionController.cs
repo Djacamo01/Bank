@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Lafise.API.controllers.Dto;
 using Lafise.API.services.Transactions;
 using Lafise.API.services.Transactions.Dto;
+using TransactionSummaryDto = Lafise.API.services.Transactions.Dto.TransactionSummaryDto;
 using Lafise.API.utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -164,12 +165,12 @@ namespace Lafise.API.controllers
         /// </remarks>
         [HttpGet("movements/{accountNumber}")]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(PagedDto<TransactionDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedDtoSummary<TransactionDto, TransactionSummaryDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
         [Description("Gets all transactions for an account with pagination")]
-        public async Task<ActionResult<PagedDto<TransactionDto>>> GetAccountMovements(
+        public async Task<ActionResult<PagedDtoSummary<TransactionDto, TransactionSummaryDto>>> GetAccountMovements(
             string accountNumber,
             [FromQuery] int page = 1, 
             [FromQuery] int pageSize = 10)
