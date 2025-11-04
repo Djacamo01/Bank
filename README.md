@@ -46,8 +46,8 @@ Lafise/
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/Lafise.git
-cd Lafise
+git clone https://github.com/Djacamo01/Bank.git
+cd Bank
 ```
 
 ### 2. Restaurar Dependencias
@@ -229,7 +229,7 @@ dotnet build Lafise.Tests/Lafise.Tests.csproj
 
 ```bash
 # Clonar el repositorio
-git clone https://github.com/tu-usuario/Lafise.git
+git clone https://github.com/Djacamo01/Bank.git
 
 # Ver estado de cambios
 git status

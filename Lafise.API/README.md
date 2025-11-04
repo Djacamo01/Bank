@@ -35,8 +35,8 @@ Antes de ejecutar el proyecto, asegúrate de tener instalado:
 Si el proyecto aún no está en tu máquina local:
 
 ```bash
-git clone <url-del-repositorio>
-cd Lafise
+git clone https://github.com/Djacamo01/Bank.git
+cd Bank
 ```
 
 ### Paso 2: Verificar la Base de Datos
