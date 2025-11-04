@@ -6,6 +6,7 @@ using Lafise.API.data;
 using Lafise.API.data.model;
 using Lafise.API.services.Auth.Dto;
 using Lafise.API.services.Auth.JWT;
+using Lafise.API.services.Accounts;
 using Lafise.API.utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
@@ -19,14 +20,16 @@ namespace Lafise.API.services.Auth
         private readonly IConfiguration _config;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IAuthInfo _authInfo;
+        private readonly AccountSettings _accountSettings;
 
-        public AuthService(IDbContextFactory<BankDataContext> db, ICryptor cryptor, IConfiguration config, IJwtTokenGenerator jwtTokenGenerator, IAuthInfo authInfo)
+        public AuthService(IDbContextFactory<BankDataContext> db, ICryptor cryptor, IConfiguration config, IJwtTokenGenerator jwtTokenGenerator, IAuthInfo authInfo, AccountSettings accountSettings)
         {
             _db = db;
             _cryptor = cryptor;
             _config = config;
             _jwtTokenGenerator = jwtTokenGenerator ?? throw new ArgumentNullException(nameof(jwtTokenGenerator));
             _authInfo = authInfo ?? throw new ArgumentNullException(nameof(authInfo));
+            _accountSettings = accountSettings ?? throw new ArgumentNullException(nameof(accountSettings));
         }
 
         public async Task<LoginResultDto> Login(string userEmail, string password)
@@ -51,8 +54,8 @@ namespace Lafise.API.services.Auth
                 if (!_cryptor.VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt))
                     throw new LafiseException(401, "Invalid password.");
 
-                // Obtener el número de cuenta (primera cuenta del cliente)
-                var accountNumber = user.Accounts?.FirstOrDefault()?.AccountNumber ?? string.Empty;
+                
+                var accountNumber = SelectAccountByPriority(user.Accounts);
 
                 // Generar token y refresh token
                 var token = _jwtTokenGenerator.CreateToken(user, accountNumber);
@@ -91,6 +94,63 @@ namespace Lafise.API.services.Auth
                 AccountNumber = _authInfo.AccountNumber()
             };
             return Task.FromResult(authInfoDto);
+        }
+
+        public async Task<LoginResultDto> RefreshToken(string refreshToken)
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
+                throw new LafiseException(400, "Refresh token cannot be empty.");
+
+            using var context = await _db.CreateDbContextAsync();
+
+           
+            var user = await context.Clients
+                .Include(c => c.Accounts)
+                .FirstOrDefaultAsync(x => x.RefreshToken == refreshToken);
+
+            if (user == null)
+                throw new LafiseException(404, "Invalid refresh token.");
+
+           
+            if (user.RefreshTokenExpiration == null || user.RefreshTokenExpiration < DateTime.UtcNow)
+                throw new LafiseException(401, "Refresh token has expired.");
+
+            
+            var accountNumber = SelectAccountByPriority(user.Accounts);
+
+           
+            var token = _jwtTokenGenerator.CreateToken(user, accountNumber);
+            var newRefreshToken = _jwtTokenGenerator.GenerateRefreshToken(user);
+
+            
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiration = token.ExpirationDate;
+
+            context.AddOrUpdate(user);
+            await context.SaveChangesAsync();
+
+           
+            var loginResult = new LoginResultDto
+            {
+                UserId = user.Id,
+                UserName = $"{user.Name} {user.LastName}",
+                UserEmail = user.Email ?? string.Empty,
+                AuthToken = token.Token,
+                RefreshToken = newRefreshToken,
+                AuthTokenExpiration = token.ExpirationDate
+            };
+
+            return loginResult;
+        }
+
+        private string SelectAccountByPriority(ICollection<Account> accounts)
+        {
+            if (accounts == null || accounts.Count == 0)
+                return string.Empty;
+
+            // Da prioridad a "Savings" únicamente
+            var savings = accounts.FirstOrDefault(a => a.AccountType.Equals("Savings", StringComparison.OrdinalIgnoreCase));
+            return savings != null ? savings.AccountNumber : accounts.First().AccountNumber;
         }
 
     }
