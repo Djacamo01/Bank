@@ -54,17 +54,16 @@ public class Program
 
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                c.IncludeXmlComments(xmlPath);
-
-                var httpContextAccessor = builder.Services.BuildServiceProvider().GetService<IHttpContextAccessor>();
-                var host = httpContextAccessor?.HttpContext?.Request?.Host.Value ?? "localhost";
-                var baseUrl = $"https://{host}";
-
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "TraderPal Connect API", Version = "v1" });
-                c.AddServer(new OpenApiServer
+                if (File.Exists(xmlPath))
                 {
-                    Url = baseUrl,
-                    Description = "Sandbox"
+                    c.IncludeXmlComments(xmlPath);
+                }
+
+                c.SwaggerDoc("v1", new OpenApiInfo 
+                { 
+                    Title = "Lafise API", 
+                    Version = "v1",
+                    Description = "API para el sistema bancario Lafise"
                 });
             });
 
@@ -91,9 +90,6 @@ public class Program
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
-
-            // Middleware de manejo de excepciones global
-            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseCors("AllowAll");
 

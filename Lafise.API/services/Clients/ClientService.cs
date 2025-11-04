@@ -77,7 +77,7 @@ namespace Lafise.API.services.clients
                             throw new ArgumentException("Account type is required when creating a client.", nameof(client.AccountType));
                         }
 
-                        var createdAccount = await _accountService.CreateAccount(context, newClient.Id, client.AccountType);
+                        var createdAccount = await _accountService.CreateAccount(newClient.Id, client.AccountType);
 
                         await transaction.CommitAsync();
                         

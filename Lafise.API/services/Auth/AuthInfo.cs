@@ -13,7 +13,9 @@ namespace Lafise.API.services.Auth
 
         public string UserId()
         {
-            return _httpContextAccessor.HttpContext!.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Buscar primero "UserId" (claim personalizado) y luego ClaimTypes.NameIdentifier como fallback
+            return _httpContextAccessor.HttpContext!.User.FindFirstValue("UserId") ;
+                
         }
 
         public string UserName()

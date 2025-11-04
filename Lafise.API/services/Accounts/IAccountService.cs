@@ -10,9 +10,9 @@ namespace Lafise.API.services.Accounts
 {
     public interface   IAccountService
     {
-        Task<Account> CreateAccount(string clientId, string accountType);
-        Task<Account> CreateAccount(BankDataContext context, string clientId, string accountType);
-        Task<List<AccountDetailsDto>> GetAllAccounts();
-        Task<AccountDetailsDto> GetAccountDetailsByAccountNumber(string accountNumber);
+        Task<AccountDto> CreateAccount(string clientId, string accountType);
+        Task<AccountDto> CreateAccount(string accountType);
+        Task<List<AccountDto>> GetAllAccounts();
+        Task<AccountDto> GetAccountDetailsByAccountNumber(string accountNumber);
     }
 }

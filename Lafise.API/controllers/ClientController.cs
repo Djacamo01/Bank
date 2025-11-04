@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel; 
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Lafise.API.data.model;
 using Lafise.API.services.clients;
 using Lafise.API.services.Clients.Dto;
+using Lafise.API.utils;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lafise.API.controllers
@@ -40,7 +40,8 @@ namespace Lafise.API.controllers
         [HttpGet]
         [Produces("application/json")]
         [ProducesResponseType(typeof(List<Client>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [Description("Gets all clients")]
         public async Task<ActionResult<List<Client>>> GetAllClients()
         {
@@ -49,10 +50,13 @@ namespace Lafise.API.controllers
                 var clients = await _clientService.GetAllClients();
                 return Ok(clients);
             }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                // In a real-world scenario you might wrap in an error response DTO.
-                return StatusCode((int)HttpStatusCode.InternalServerError, ex.Message);
+                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while retrieving clients.", detail = ex.Message });
             }
         }
 
@@ -67,7 +71,8 @@ namespace Lafise.API.controllers
         [HttpPost]
         [Produces("application/json")]
         [ProducesResponseType(typeof(ClientResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [Description("Creates a new client")]
         public async Task<ActionResult<ClientResponseDto>> CreateClient([FromBody] CreateClientDto client)
         {
@@ -76,10 +81,13 @@ namespace Lafise.API.controllers
                 var newClient = await _clientService.CreateClient(client);
                 return Ok(newClient);
             }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                // In a real-world scenario you might validate, check for duplicates, etc.
-                return BadRequest(ex.Message);
+                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while creating the client.", detail = ex.Message });
             }
         }
     }

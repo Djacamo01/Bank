@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel; // For Description attribute
-using System.Linq;
-using System.Net;
+using System.ComponentModel;
 using System.Threading.Tasks;
-using Lafise.API.data.model;
 using Lafise.API.services.Accounts;
 using Lafise.API.services.Accounts.Dto;
 using Lafise.API.utils;
@@ -42,21 +39,62 @@ namespace Lafise.API.controllers
         /// </remarks>
         [HttpGet]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(List<AccountDetailsDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(List<AccountDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         [Description("Gets all accounts")]
-        public async Task<ActionResult<List<AccountDetailsDto>>> GetAllAccounts()
+        public async Task<ActionResult<List<AccountDto>>> GetAllAccounts()
         {
             try
             {
                 var accounts = await _accountService.GetAllAccounts();
                 return Ok(accounts);
             }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+            }
             catch (Exception ex)
             {
-                // In a real-world scenario you might wrap in an error response DTO.
-                return StatusCode((int)HttpStatusCode.InternalServerError, ex.Message);
+                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while retrieving accounts.", detail = ex.Message });
             }
         }
+
+
+        /// <summary>
+        /// Creates a new account.
+        /// </summary>
+        /// <param name="accountType">The type of account to create.</param>
+        /// <returns>The created account's details.</returns>
+        /// <remarks>
+        /// Adds a new account to the system.
+        /// </remarks>
+        [HttpPost("create")]
+        [Authorize]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AccountDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [Description("Creates a new account")]
+        public async Task<ActionResult<AccountDto>> CreateAccount([FromQuery] string accountType)
+        {
+            try
+            {
+                var account = await _accountService.CreateAccount(accountType);
+                return Ok(account);
+            }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while creating the account.", detail = ex.Message });
+            }
+        }
+            
     }
 }
+    

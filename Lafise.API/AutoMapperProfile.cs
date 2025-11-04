@@ -16,11 +16,8 @@ namespace Lafise.API
             // Mapeos de Client
             CreateMap<Client, ClientResponseDto>();
             
-            
             // Mapeos de Account
-            CreateMap<Client, ClientInfoDto>();
-            CreateMap<Account, AccountDetailsDto>()
-                .ForMember(dest => dest.Owner, opt => opt.MapFrom(src => src.Client));
+            CreateMap<Account, AccountDto>();
         }
     }
 }

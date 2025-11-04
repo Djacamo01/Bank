@@ -21,6 +21,12 @@ namespace Lafise.API.controllers
         }
 
         [HttpPost("login")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(LoginResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             try
@@ -30,11 +36,11 @@ namespace Lafise.API.controllers
             }
             catch (LafiseException ex)
             {
-                return StatusCode(ex.Code, new { message = ex.Message, code = ex.Code });
+                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred during login.", error = ex.Message });
+                return StatusCode(500, new { error = true, code = 500, message = "An error occurred during login.", detail = ex.Message });
             }
         }
     }
