@@ -25,10 +25,11 @@ public class Program
                 opt.AddPolicy("AllowAll", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
             });
 
-           
+            //Agregar Servicios
             AddServices(builder);
             builder.Services.AddAutoMapper(cfg => { }, typeof(AutoMapperProfile));
 
+            // Add services to the container.
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
@@ -101,7 +102,7 @@ public class Program
             builder.Services.Configure<AccountSettings>(
                 builder.Configuration.GetSection(AccountSettings.SettingsName));
 
-            
+            // Registrar AccountSettings como singleton para acceso directo
             builder.Services.AddSingleton<AccountSettings>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
