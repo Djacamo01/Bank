@@ -15,7 +15,7 @@ namespace Lafise.API
         {
             // Mapeos de Client
             CreateMap<Client, ClientResponseDto>();
-            CreateMap<CreateClientDto, Client>();
+            
             
             // Mapeos de Account
             CreateMap<Client, ClientInfoDto>();
