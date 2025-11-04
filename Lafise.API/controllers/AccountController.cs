@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Lafise.API.controllers.Dto;
 using Lafise.API.services.Accounts;
 using Lafise.API.services.Accounts.Dto;
+using Lafise.API.services.Transactions.Dto;
 using Lafise.API.utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,9 +42,9 @@ namespace Lafise.API.controllers
         [HttpGet]
         [Produces("application/json")]
         [ProducesResponseType(typeof(List<AccountDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
         [Description("Gets all accounts")]
         public async Task<ActionResult<List<AccountDto>>> GetAllAccounts()
         {
@@ -53,11 +55,16 @@ namespace Lafise.API.controllers
             }
             catch (LafiseException ex)
             {
-                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+                return StatusCode(ex.Code, new ErrorDto { Code = ex.Code, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while retrieving accounts.", detail = ex.Message });
+                return StatusCode(500, new ErrorDto 
+                { 
+                    Code = 500, 
+                    Message = "An error occurred while retrieving accounts.", 
+                    Detail = ex.Message 
+                });
             }
         }
 
@@ -74,9 +81,9 @@ namespace Lafise.API.controllers
         [Authorize]
         [Produces("application/json")]
         [ProducesResponseType(typeof(AccountDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(object), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
         [Description("Creates a new account")]
         public async Task<ActionResult<AccountDto>> CreateAccount([FromQuery] string accountType)
         {
@@ -87,11 +94,54 @@ namespace Lafise.API.controllers
             }
             catch (LafiseException ex)
             {
-                return StatusCode(ex.Code, new { error = true, code = ex.Code, message = ex.Message });
+                return StatusCode(ex.Code, new ErrorDto { Code = ex.Code, Message = ex.Message });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = true, code = 500, message = "An error occurred while creating the account.", detail = ex.Message });
+                return StatusCode(500, new ErrorDto 
+                { 
+                    Code = 500, 
+                    Message = "An error occurred while creating the account.", 
+                    Detail = ex.Message 
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gets all transactions (movements) for a specific account.
+        /// </summary>
+        /// <param name="accountNumber">The account number to get transactions for.</param>
+        /// <returns>List of transactions for the account.</returns>
+        /// <remarks>
+        /// Returns all transactions for the specified account, ordered by date (most recent first).
+        /// </remarks>
+        [HttpGet("{accountNumber}/movements")]
+        [Authorize]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(List<TransactionDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
+        [Description("Gets all transactions (movements) for an account")]
+        public async Task<ActionResult<List<TransactionDto>>> GetAccountMovements(string accountNumber)
+        {
+            try
+            {
+                var movements = await _accountService.GetAccountMovements(accountNumber);
+                return Ok(movements);
+            }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new ErrorDto { Code = ex.Code, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorDto 
+                { 
+                    Code = 500, 
+                    Message = "An error occurred while retrieving account movements.", 
+                    Detail = ex.Message 
+                });
             }
         }
             

@@ -27,7 +27,7 @@ namespace Lafise.API.data.model
         /// </summary>
         [Display(Description = "Unique identifier of the transaction")]
         [DefaultValue("05f3daf7-234b-4e9c-839d-d7565e3a1871")]
-        public required string Id { get; set; }
+        public  string Id { get; set; }
 
         /// <summary>
         /// Foreign key referencing the associated account.

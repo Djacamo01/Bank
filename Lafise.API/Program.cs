@@ -3,9 +3,18 @@ using System.Text.Json.Serialization;
 using AutoMapper;
 using Lafise.API.data;
 using Lafise.API.services.Accounts;
+using Lafise.API.services.Accounts.Factories;
+using Lafise.API.services.Accounts.Mappers;
+using Lafise.API.services.Accounts.Repositories;
+using Lafise.API.services.Accounts.Services;
+using Lafise.API.services.Accounts.Validators;
 using Lafise.API.services.Auth;
 using Lafise.API.services.Auth.JWT;
 using Lafise.API.services.clients;
+using Lafise.API.services.Transactions;
+using Lafise.API.services.Transactions.Factories;
+using Lafise.API.services.Transactions.Repositories;
+using Lafise.API.services.Transactions.Validators;
 using Lafise.API.utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -59,11 +68,23 @@ public class Program
                     c.IncludeXmlComments(xmlPath);
                 }
 
-                c.SwaggerDoc("v1", new OpenApiInfo 
-                { 
-                    Title = "Lafise API", 
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Lafise Banking System API - Prueba Técnica",
                     Version = "v1",
-                    Description = "API para el sistema bancario Lafise"
+                    Description = "Esta API forma parte de una prueba técnica que implementa funcionalidades típicas de un sistema bancario, como la gestión de cuentas, saldos y otros recursos relacionados. No es un producto oficial de Banco Lafise. El código y las implementaciones son de autoría individual exclusivamente con fines evaluativos y demostrativos.",
+                    TermsOfService = new Uri("https://www.djacamo01.dev/privacy"),
+                    Contact = new OpenApiContact
+                    {
+                        Name = "Donald Miguel Jacamo - Desarrollador (Prueba Técnica)",
+                        Email = "jacamodonalddmiguel@gmail.com",
+                        Url = new Uri("https://www.djacamo01.dev/")
+                    },
+                    License = new OpenApiLicense
+                    {
+                        Name = "Código abierto bajo licencia MIT",
+                        Url = new Uri("https://opensource.org/licenses/MIT")
+                    }
                 });
             });
 
@@ -131,16 +152,30 @@ public class Program
 
             builder.Services.AddAuthorization();
 
-            // Registrar servicios de utilidad
+            
             builder.Services.AddScoped<ICryptor, Cryptor>();
 
-            // Registrar servicios de autenticación
             builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
             builder.Services.AddScoped<IAuthInfo, AuthInfo>();
             builder.Services.AddScoped<IAuthService, AuthService>();
 
-            // Registrar servicios de negocio
+           
             builder.Services.AddScoped<IClientService, ClientService>();
+            
+           
+            builder.Services.AddScoped<IAccountCreationValidator, AccountCreationValidator>();
+            builder.Services.AddScoped<Lafise.API.services.Accounts.Repositories.IAccountRepository, Lafise.API.services.Accounts.Repositories.AccountRepository>();
+            builder.Services.AddScoped<IAccountFactory, AccountFactory>();
+            builder.Services.AddScoped<IAccountNumberGenerator, AccountNumberGenerator>();
+            builder.Services.AddScoped<IAccountBalanceMapper, AccountBalanceMapper>();
+            
+            
+            builder.Services.AddScoped<ITransactionValidator, TransactionValidator>();
+            builder.Services.AddScoped<IAccountValidator, AccountValidator>();
+            builder.Services.AddScoped<Lafise.API.services.Transactions.Repositories.IAccountRepository, Lafise.API.services.Transactions.Repositories.AccountRepository>();
+            builder.Services.AddScoped<ITransactionFactory, TransactionFactory>();
+            builder.Services.AddScoped<ITransactionService, TransactionService>();
+            
             builder.Services.AddScoped<IAccountService, AccountService>();
 
 
