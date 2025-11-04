@@ -11,6 +11,7 @@ using Lafise.API.services.Accounts.Validators;
 using Lafise.API.services.Auth;
 using Lafise.API.services.Auth.JWT;
 using Lafise.API.services.clients;
+using Lafise.API.services.Clients;
 using Lafise.API.services.Transactions;
 using Lafise.API.services.Transactions.Factories;
 using Lafise.API.services.Transactions.Repositories;
@@ -234,6 +235,11 @@ public class Program
             builder.Services.AddScoped<IAuthService, AuthService>();
 
             // Registrar servicios de negocio
+            // Registrar servicios de clientes (SOLID)
+            builder.Services.AddScoped<Lafise.API.services.Clients.Repositories.IClientRepository, Lafise.API.services.Clients.Repositories.ClientRepository>();
+            builder.Services.AddScoped<Lafise.API.services.Clients.Validators.IClientCreationValidator, Lafise.API.services.Clients.Validators.ClientCreationValidator>();
+            builder.Services.AddScoped<Lafise.API.services.Clients.Factories.IClientFactory, Lafise.API.services.Clients.Factories.ClientFactory>();
+            builder.Services.AddScoped<Lafise.API.services.Clients.Services.ITransactionSummaryCalculator, Lafise.API.services.Clients.Services.TransactionSummaryCalculator>();
             builder.Services.AddScoped<IClientService, ClientService>();
             
           

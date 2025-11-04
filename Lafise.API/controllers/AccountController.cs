@@ -6,6 +6,7 @@ using Lafise.API.controllers.Dto;
 using Lafise.API.services.Accounts;
 using Lafise.API.services.Accounts.Dto;
 using Lafise.API.services.Transactions.Dto;
+using TransactionSummaryDto = Lafise.API.services.Transactions.Dto.TransactionSummaryDto;
 using Lafise.API.utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,48 +33,7 @@ namespace Lafise.API.controllers
             _accountService = accountService;
         }
 
-        /// <summary>
-        /// Gets all accounts with pagination.
-        /// </summary>
-        /// <param name="page">Page number (default: 1)</param>
-        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
-        /// <returns>Returns a paginated list of all account details.</returns>
-        /// <remarks>
-        /// Obtains a paginated list of accounts in the system.
-        /// </remarks>
-        [HttpGet]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(PagedDto<AccountDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
-        [Description("Gets all accounts with pagination")]
-        public async Task<ActionResult<PagedDto<AccountDto>>> GetAllAccounts(
-            [FromQuery] int page = 1, 
-            [FromQuery] int pageSize = 10)
-        {
-            try
-            {
-                var pagination = new PaginationRequestDto { Page = page, PageSize = pageSize };
-                var accounts = await _accountService.GetAllAccounts(pagination);
-                return Ok(accounts);
-            }
-            catch (LafiseException ex)
-            {
-                return StatusCode(ex.Code, new ErrorDto { Code = ex.Code, Message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new ErrorDto 
-                { 
-                    Code = 500, 
-                    Message = "An error occurred while retrieving accounts.", 
-                    Detail = ex.Message 
-                });
-            }
-        }
-
-
+        
         /// <summary>
         /// Creates a new account.
         /// </summary>
@@ -113,6 +73,45 @@ namespace Lafise.API.controllers
         }
 
         /// <summary>
+        /// Gets the current balance of a specific account by account number.
+        /// </summary>
+        /// <param name="accountNumber">The account number to query the balance for.</param>
+        /// <returns>The current balance information for the account.</returns>
+        /// <remarks>
+        /// Returns the current balance, account type, and last updated timestamp for the specified account.
+        /// </remarks>
+        [HttpGet("{accountNumber}/balance")]
+        [Authorize]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AccountBalanceDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
+        [Description("Gets the current balance of an account by account number")]
+        public async Task<ActionResult<AccountBalanceDto>> GetAccountBalance(string accountNumber)
+        {
+            try
+            {
+                var balance = await _accountService.GetAccountBalance(accountNumber);
+                return Ok(balance);
+            }
+            catch (LafiseException ex)
+            {
+                return StatusCode(ex.Code, new ErrorDto { Code = ex.Code, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ErrorDto 
+                { 
+                    Code = 500, 
+                    Message = "An error occurred while retrieving account balance.", 
+                    Detail = ex.Message 
+                });
+            }
+        }
+
+        /// <summary>
         /// Gets all transactions (movements) for a specific account with pagination.
         /// </summary>
         /// <param name="accountNumber">The account number to get transactions for.</param>
@@ -125,12 +124,12 @@ namespace Lafise.API.controllers
         [HttpGet("{accountNumber}/movements")]
         [Authorize]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(PagedDto<TransactionDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(PagedDtoSummary<TransactionDto, TransactionSummaryDto>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
         [Description("Gets all transactions (movements) for an account with pagination")]
-        public async Task<ActionResult<PagedDto<TransactionDto>>> GetAccountMovements(
+        public async Task<ActionResult<PagedDtoSummary<TransactionDto, TransactionSummaryDto>>> GetAccountMovements(
             string accountNumber,
             [FromQuery] int page = 1, 
             [FromQuery] int pageSize = 10)

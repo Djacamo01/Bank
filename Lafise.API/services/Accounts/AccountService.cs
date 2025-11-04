@@ -14,6 +14,7 @@ using Lafise.API.services.Accounts.Services;
 using Lafise.API.services.Accounts.Validators;
 using Lafise.API.services.Auth;
 using Lafise.API.services.Transactions.Dto;
+using TransactionSummaryDto = Lafise.API.services.Transactions.Dto.TransactionSummaryDto;
 using Lafise.API.services.Transactions.Validators;
 using Lafise.API.utils;
 using Microsoft.EntityFrameworkCore;
@@ -97,66 +98,44 @@ namespace Lafise.API.services.Accounts
 
         public async Task<AccountDto> CreateAccount(string clientId, string accountType)
         {
+            return await CreateAccount(clientId, accountType, null);
+        }
+
+        public async Task<AccountDto> CreateAccount(string clientId, string accountType, BankDataContext context)
+        {
             var validTypes = _settings.ValidAccountTypes ?? Array.Empty<string>();
             var typeNormalized = _accountCreationValidator.ValidateAndNormalizeAccountType(accountType, validTypes);
 
-            await _accountCreationValidator.ValidateClientExistsAsync(clientId);
-            await _accountCreationValidator.ValidateNoDuplicateAccountTypeAsync(clientId, typeNormalized, validTypes);
-
-            var accountNumber = await _accountNumberGenerator.GenerateAccountNumberAsync();
-            var account = _accountFactory.CreateAccount(accountNumber, typeNormalized, clientId);
-
-            await _accountRepository.SaveAccountAsync(account);
-
-            return _mapper.Map<AccountDto>(account);
-        }
-
-        public async Task<PagedDto<AccountDto>> GetAllAccounts(PaginationRequestDto pagination)
-        {
-            // Validar parámetros de paginación
-            if (pagination.Page < 1)
-                throw new LafiseException(400, "Page number must be greater than 0.");
-            if (pagination.PageSize < 1 || pagination.PageSize > 100)
-                throw new LafiseException(400, "Page size must be between 1 and 100.");
-
-            using var context = await _db.CreateDbContextAsync();
-
-            var query = context.Accounts.AsQueryable();
-
-            // Contar total de elementos
-            var totalCount = await query.CountAsync();
-
-            // Proteger contra división por cero
-            if (pagination.PageSize == 0)
-                pagination.PageSize = 10;
-
-            // Paginación
-            var pagedResults = await query
-                .OrderBy(a => a.AccountNumber)
-                .Skip((pagination.Page - 1) * pagination.PageSize)
-                .Take(pagination.PageSize)
-                .ToListAsync();
-
-            // Calcular total de páginas
-            var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
-
-            var accountDtos = _mapper.Map<List<AccountDto>>(pagedResults);
-
-            var response = new PagedDto<AccountDto>
+            if (context != null)
             {
-                Data = accountDtos,
-                Pagination = new Pagination
-                {
-                    TotalCount = totalCount,
-                    Count = accountDtos.Count,
-                    CurrentPage = pagination.Page,
-                    TotalPages = totalPages,
-                    PageSize = pagination.PageSize
-                }
-            };
+                // Usar el contexto proporcionado (para transacciones)
+                await _accountCreationValidator.ValidateClientExistsAsync(clientId, context);
+                await _accountCreationValidator.ValidateNoDuplicateAccountTypeAsync(clientId, typeNormalized, validTypes, context);
 
-            return response;
+                var accountNumber = await _accountNumberGenerator.GenerateAccountNumberAsync();
+                var account = _accountFactory.CreateAccount(accountNumber, typeNormalized, clientId);
+
+                context.AddOrUpdate(account);
+                await context.SaveChangesAsync();
+
+                return _mapper.Map<AccountDto>(account);
+            }
+            else
+            {
+                // Usar contextos nuevos (comportamiento normal)
+                await _accountCreationValidator.ValidateClientExistsAsync(clientId);
+                await _accountCreationValidator.ValidateNoDuplicateAccountTypeAsync(clientId, typeNormalized, validTypes);
+
+                var accountNumber = await _accountNumberGenerator.GenerateAccountNumberAsync();
+                var account = _accountFactory.CreateAccount(accountNumber, typeNormalized, clientId);
+
+                await _accountRepository.SaveAccountAsync(account);
+
+                return _mapper.Map<AccountDto>(account);
+            }
         }
+
+    
 
         public async Task<AccountDto> GetAccountDetailsByAccountNumber(string accountNumber)
         {
@@ -170,7 +149,7 @@ namespace Lafise.API.services.Accounts
             return _mapper.Map<AccountDto>(account);
         }
 
-        public async Task<PagedDto<TransactionDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination)
+        public async Task<PagedDtoSummary<TransactionDto, TransactionSummaryDto>> GetAccountMovements(string accountNumber, PaginationRequestDto pagination)
         {
             if (string.IsNullOrWhiteSpace(accountNumber))
                 throw new LafiseException(400, "Account number cannot be empty.");
@@ -181,10 +160,22 @@ namespace Lafise.API.services.Accounts
             if (pagination.PageSize < 1 || pagination.PageSize > 100)
                 throw new LafiseException(400, "Page size must be between 1 and 100.");
 
+            // Obtener el ID del usuario autenticado
+            var clientId = _authInfo.UserId();
+            if (string.IsNullOrWhiteSpace(clientId))
+                throw new LafiseException(401, "User not authenticated.");
+
             var account = await _accountRepository.GetAccountByNumberAsync(accountNumber);
             _accountValidator.ValidateAccountExists(account, accountNumber);
             
             if (account == null) throw new InvalidOperationException("Account should not be null after validation");
+
+            // Validar que la cuenta pertenezca al usuario autenticado
+            if (account.ClientId != clientId)
+            {
+                throw new LafiseException(403, 
+                    "You cannot view movements from other accounts. You can only view movements from your own accounts.");
+            }
 
             using var context = await _db.CreateDbContextAsync();
 
@@ -208,13 +199,45 @@ namespace Lafise.API.services.Accounts
             // Calcular total de páginas
             var totalPages = (int)Math.Ceiling((double)totalCount / pagination.PageSize);
 
+            // Calcular resumen de todas las transacciones (no solo las paginadas)
+            var allTransactions = await query.ToListAsync();
+            
+            var summary = new TransactionSummaryDto
+            {
+                TotalDeposits = allTransactions.Count(t => t.Type.Equals("Deposit", StringComparison.OrdinalIgnoreCase)),
+                TotalDepositsAmount = allTransactions
+                    .Where(t => t.Type.Equals("Deposit", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalWithdrawals = allTransactions.Count(t => t.Type.Equals("Withdrawal", StringComparison.OrdinalIgnoreCase)),
+                TotalWithdrawalsAmount = allTransactions
+                    .Where(t => t.Type.Equals("Withdrawal", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalTransfersOut = allTransactions.Count(t => t.Type.Equals("Transfer Out", StringComparison.OrdinalIgnoreCase)),
+                TotalTransfersOutAmount = allTransactions
+                    .Where(t => t.Type.Equals("Transfer Out", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                TotalTransfersIn = allTransactions.Count(t => t.Type.Equals("Transfer In", StringComparison.OrdinalIgnoreCase)),
+                TotalTransfersInAmount = allTransactions
+                    .Where(t => t.Type.Equals("Transfer In", StringComparison.OrdinalIgnoreCase))
+                    .Sum(t => t.Amount),
+                
+                CurrentBalance = account.CurrentBalance
+            };
+
+            // Calcular monto neto
+            summary.NetAmount = (summary.TotalDepositsAmount + summary.TotalTransfersInAmount) 
+                - (summary.TotalWithdrawalsAmount + summary.TotalTransfersOutAmount);
+
             var transactionDtos = _mapper.Map<List<TransactionDto>>(pagedResults);
             foreach (var dto in transactionDtos)
             {
                 dto.AccountNumber = account.AccountNumber;
             }
 
-            var response = new PagedDto<TransactionDto>
+            var response = new PagedDtoSummary<TransactionDto, TransactionSummaryDto>
             {
                 Data = transactionDtos,
                 Pagination = new Pagination
@@ -224,7 +247,8 @@ namespace Lafise.API.services.Accounts
                     CurrentPage = pagination.Page,
                     TotalPages = totalPages,
                     PageSize = pagination.PageSize
-                }
+                },
+                Summary = summary
             };
 
             return response;

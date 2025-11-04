@@ -6,8 +6,10 @@ using System.Threading.Tasks;
 using Lafise.API.controllers.Dto;
 using Lafise.API.data.model;
 using Lafise.API.services.clients;
+using Lafise.API.services.Clients;
 using Lafise.API.services.Clients.Dto;
 using Lafise.API.utils;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lafise.API.controllers
@@ -32,29 +34,31 @@ namespace Lafise.API.controllers
         }
 
         /// <summary>
-        /// Gets all clients with pagination.
+        /// Gets a comprehensive summary of all accounts and their transaction statistics for the authenticated client.
         /// </summary>
-        /// <param name="page">Page number (default: 1)</param>
-        /// <param name="pageSize">Number of items per page (default: 10, max: 100)</param>
-        /// <returns>Returns a paginated list of all client details.</returns>
+        /// <returns>Summary containing all accounts, balances, and transaction statistics.</returns>
         /// <remarks>
-        /// Obtains a paginated list of clients in the system.
+        /// Returns a detailed summary including:
+        /// - Client information (ID, name, email)
+        /// - List of all accounts with their details
+        /// - Transaction summaries per account (deposits, withdrawals, transfers)
+        /// - Total balance across all accounts
+        /// - Total number of accounts
         /// </remarks>
-        [HttpGet]
+        [HttpGet("summary")]
+        [Authorize]
         [Produces("application/json")]
-        [ProducesResponseType(typeof(PagedDto<ClientResponseDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ClientAccountsSummaryDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ErrorDto), StatusCodes.Status500InternalServerError)]
-        [Description("Gets all clients with pagination")]
-        public async Task<ActionResult<PagedDto<ClientResponseDto>>> GetAllClients(
-            [FromQuery] int page = 1, 
-            [FromQuery] int pageSize = 10)
+        [Description("Gets comprehensive summary of all accounts and transactions for the authenticated client")]
+        public async Task<ActionResult<ClientAccountsSummaryDto>> GetClientAccountsSummary()
         {
             try
             {
-                var pagination = new PaginationRequestDto { Page = page, PageSize = pageSize };
-                var clients = await _clientService.GetAllClients(pagination);
-                return Ok(clients);
+                var summary = await _clientService.GetClientAccountsSummary();
+                return Ok(summary);
             }
             catch (LafiseException ex)
             {
@@ -65,11 +69,13 @@ namespace Lafise.API.controllers
                 return StatusCode(500, new ErrorDto 
                 { 
                     Code = 500, 
-                    Message = "An error occurred while retrieving clients.", 
+                    Message = "An error occurred while retrieving client accounts summary.", 
                     Detail = ex.Message 
                 });
             }
         }
+
+        
 
         /// <summary>
         /// Creates a new client.
