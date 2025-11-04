@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using AutoMapper;
 using Lafise.API.data;
 using Lafise.API.services.Accounts;
+using Lafise.API.services.Auth;
+using Lafise.API.services.Auth.JWT;
 using Lafise.API.services.clients;
 using Lafise.API.utils;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -119,6 +121,10 @@ public class Program
 
             // Registrar servicios de utilidad
             builder.Services.AddScoped<ICryptor, Cryptor>();
+
+            // Registrar servicios de autenticación
+            builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
 
             // Registrar servicios de negocio
             builder.Services.AddScoped<IClientService, ClientService>();

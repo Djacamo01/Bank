@@ -17,10 +17,13 @@ namespace Lafise.API.Migrations
                 {
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
+                    TaxId = table.Column<string>(type: "TEXT", nullable: false),
                     LastName = table.Column<string>(type: "TEXT", nullable: false),
                     Email = table.Column<string>(type: "TEXT", nullable: true),
                     PasswordHash = table.Column<string>(type: "TEXT", nullable: false),
                     PasswordSalt = table.Column<string>(type: "TEXT", nullable: false),
+                    RefreshToken = table.Column<string>(type: "TEXT", nullable: false),
+                    RefreshTokenExpiration = table.Column<DateTime>(type: "TEXT", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "TEXT", nullable: false),
                     Gender = table.Column<string>(type: "TEXT", nullable: false),
                     Income = table.Column<decimal>(type: "TEXT", nullable: false),

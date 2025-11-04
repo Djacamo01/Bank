@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lafise.API.Migrations
 {
     [DbContext(typeof(BankDataContext))]
-    [Migration("20251103232025_AddTaxIdToClient")]
-    partial class AddTaxIdToClient
+    [Migration("20251104022719_fixproperties")]
+    partial class fixproperties
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -94,6 +94,12 @@ namespace Lafise.API.Migrations
 
                     b.Property<string>("PasswordSalt")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RefreshTokenExpiration")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TaxId")

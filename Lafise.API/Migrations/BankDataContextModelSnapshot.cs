@@ -93,6 +93,12 @@ namespace Lafise.API.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RefreshTokenExpiration")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("TaxId")
                         .IsRequired()
                         .HasColumnType("TEXT");

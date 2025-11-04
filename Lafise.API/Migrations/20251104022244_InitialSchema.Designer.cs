@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lafise.API.Migrations
 {
     [DbContext(typeof(BankDataContext))]
-    [Migration("20251103230420_InitialSchema")]
+    [Migration("20251104022244_InitialSchema")]
     partial class InitialSchema
     {
         /// <inheritdoc />
@@ -93,6 +93,17 @@ namespace Lafise.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordSalt")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RefreshTokenExpiration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TaxId")
                         .IsRequired()
                         .HasColumnType("TEXT");
 

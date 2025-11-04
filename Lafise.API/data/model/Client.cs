@@ -69,6 +69,18 @@ namespace Lafise.API.data.model
         public string PasswordSalt { get; set; }
 
         /// <summary>
+        /// Refresh token for the client.
+        /// </summary>
+        [Display(Description = "Refresh token for the client")]
+        public string? RefreshToken { get; set; }
+
+        /// <summary>
+        /// Expiration date of the refresh token.
+        /// </summary>
+        [Display(Description = "Expiration date of the refresh token")]
+        public DateTime? RefreshTokenExpiration { get; set; }
+
+        /// <summary>
         /// Client's date of birth.
         /// </summary>
         [Display(Description = "Client's date of birth")]
