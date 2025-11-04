@@ -7,10 +7,13 @@ using Lafise.API.services.Auth;
 using Lafise.API.services.Auth.JWT;
 using Lafise.API.services.clients;
 using Lafise.API.utils;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 
 
 
@@ -38,20 +41,30 @@ public class Program
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
-            builder.Services.AddSwaggerGen(c =>
+           builder.Services.AddSwaggerGen(c =>
             {
+                c.OperationFilter<SecurityRequirementsOperationFilter>();
+                c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+                {
+                    Description = "Standard Authorization header using the Bearer scheme. Example: \"bearer {token}\"",
+                    In = ParameterLocation.Header,
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey
+                });
+
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                if (File.Exists(xmlPath))
-                {
-                    c.IncludeXmlComments(xmlPath);
-                }
+                c.IncludeXmlComments(xmlPath);
 
-                c.SwaggerDoc("v1", new OpenApiInfo 
-                { 
-                    Title = "Lafise API", 
-                    Version = "v1",
-                    Description = "API para gestión bancaria - Lafise"
+                var httpContextAccessor = builder.Services.BuildServiceProvider().GetService<IHttpContextAccessor>();
+                var host = httpContextAccessor?.HttpContext?.Request?.Host.Value ?? "localhost";
+                var baseUrl = $"https://{host}";
+
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "TraderPal Connect API", Version = "v1" });
+                c.AddServer(new OpenApiServer
+                {
+                    Url = baseUrl,
+                    Description = "Sandbox"
                 });
             });
 
@@ -78,6 +91,9 @@ public class Program
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
             });
+
+            // Middleware de manejo de excepciones global
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseCors("AllowAll");
 
@@ -129,8 +145,38 @@ public class Program
             // Registrar servicios de negocio
             builder.Services.AddScoped<IClientService, ClientService>();
             builder.Services.AddScoped<IAccountService, AccountService>();
+
+
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(opt =>
+                {
+                    opt.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = builder.Configuration.GetValue<string>("jwt-issuer"),
+                        ValidateAudience = true,
+                        ValidAudience = builder.Configuration.GetValue<string>("jwt-audience"),
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            System.Text.Encoding.UTF8.GetBytes(
+                                    builder.Configuration.GetValue<string>("jwt-token-secret-key") 
+                                    ?? throw new InvalidOperationException("JWT token secret key is not configured")
+                            )
+                        ),
+                        ValidateLifetime = true,
+                        LifetimeValidator = CustomLifetimeValidator
+                    };
+                });
            
         }
 
-        
+        private static bool CustomLifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken token, TokenValidationParameters @params)
+        {
+            if (expires != null)
+            {
+                return expires > DateTime.UtcNow;
+            }
+            return false;
+        }
 }

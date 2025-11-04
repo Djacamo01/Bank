@@ -35,12 +35,12 @@ public class AccountServiceTests : IDisposable
             ValidAccountTypes = new[] { "Savings", "Checking", "Business" }
         };
 
-        // Configure AutoMapper (AutoMapper 15.x requires ILoggerFactory)
+
         var config = new MapperConfiguration(cfg => 
         {
             cfg.AddProfile<AutoMapperProfile>();
         }, NullLoggerFactory.Instance);
-        // No validar configuración estricta en tests (el perfil ya tiene los mapeos configurados)
+       
         _mapper = config.CreateMapper();
 
         _dbContextFactory = new TestDbContextFactory(_databaseName);
